@@ -1,0 +1,48 @@
+version: "3"
+
+services:
+  namenode:
+    build:
+      context: .
+      dockerfile: DockerfileNameNode
+    hostname: namenode
+    networks:
+      - back
+    command: [ "sh", "-c", "hdfs namenode & pyspark" ]
+    ports:
+      - "9870:9870"
+      - "8889:8889"
+    env_file:
+      - hadoop-config
+    environment:
+      ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
+  datanode:
+    build:
+      context: .
+      dockerfile: DockerfileDataNode
+    networks:
+      - back
+    command: [ "hdfs", "datanode" ]
+    env_file:
+      - hadoop-config
+  resourcemanager:
+    build: .
+    networks:
+      - back
+    hostname: resourcemanager
+    command: [ "yarn", "resourcemanager" ]
+    ports:
+      - "8088:8088"
+    env_file:
+      - hadoop-config
+  nodemanager:
+    build: .
+    networks:
+      - back
+    command: [ "yarn", "nodemanager" ]
+    env_file:
+      - hadoop-config
+
+networks:
+  back:
+    driver: bridge
