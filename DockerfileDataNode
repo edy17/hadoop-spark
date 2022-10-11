@@ -1,0 +1,40 @@
+FROM apache/hadoop-runner
+
+ARG HADOOP_URL=https://dlcdn.apache.org/hadoop/common/hadoop-3.3.1/hadoop-3.3.1.tar.gz
+WORKDIR /opt
+RUN sudo rm -rf /opt/hadoop && curl -LSs -o hadoop.tar.gz $HADOOP_URL && tar zxf hadoop.tar.gz && rm hadoop.tar.gz && mv hadoop* hadoop && rm -rf /opt/hadoop/share/doc
+WORKDIR /opt/hadoop
+ADD log4j.properties /opt/hadoop/etc/hadoop/log4j.properties
+RUN sudo chown -R hadoop:users /opt/hadoop/etc/hadoop/*
+ENV HADOOP_CONF_DIR /opt/hadoop/etc/hadoop
+
+WORKDIR /tmp
+RUN wget https://downloads.apache.org/spark/spark-3.3.1/spark-3.3.1-bin-hadoop3.tgz && \
+    tar -xvf spark-3.3.1-bin-hadoop3.tgz && \
+    mv spark-3.3.1-bin-hadoop3 /opt/spark && \
+    rm spark-3.3.1-bin-hadoop3.tgz
+ENV SPARK_HOME /opt/spark
+ENV PATH $PATH:/opt/spark/bin
+ENV PYTHONPATH /opt/spark/python/lib/py4j-0.10.9.5-src.zip:/opt/spark/python/lib/pyspark.zip
+COPY spark-defaults.conf /opt/spark/conf/spark-defaults.conf
+
+RUN sudo yum install -y make gcc openssl-devel bzip2-devel libffi-devel zlib-devel xz-devel sqlite-devel.x86_64 libsqlite3x-devel.x86_64
+WORKDIR /usr/src
+RUN sudo wget https://www.python.org/ftp/python/3.7.11/Python-3.7.11.tgz && \
+    sudo tar xzf Python-3.7.11.tgz && \
+    sudo rm Python-3.7.11.tgz
+
+WORKDIR /usr/src/Python-3.7.11
+RUN sudo ./configure --enable-optimizations --enable-loadable-sqlite-extensions
+RUN sudo make altinstall
+RUN sudo ln -sfn /usr/local/bin/python3.7 /usr/bin/python3 && \
+    sudo ln -sfn /usr/local/bin/pip3.7 /usr/bin/pip3
+ENV PYSPARK_PYTHON /usr/bin/python3
+ENV PYSPARK_DRIVER_PYTHON /usr/bin/python3
+
+WORKDIR /opt/hadoop
+
+RUN sudo pip3 install pandas
+RUN sudo pip3 install matplotlib
+RUN sudo pip3 install -U scikit-learn
+RUN sudo pip3 install umap-learn
